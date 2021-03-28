@@ -1,1 +1,1 @@
-# ToDoBlazorApp
+# Simple ToDo App with Blazor

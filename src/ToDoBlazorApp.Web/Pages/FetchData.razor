@@ -1,0 +1,59 @@
+﻿@page "/fetchdata"
+
+@using ToDoBlazorApp.Web.Data
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Http
+@using System.Linq
+@inject WeatherForecastService ForecastService
+@inject ApplicationDbContext Context
+@inject IHttpContextAccessor HttpContextAccessor
+
+<h1>Your ToDo's from the beginning!</h1>
+
+@if (this.UserId == null)
+{
+    <p><em>You must to have register to see your saved ToDo's</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>ToDo Title</th>
+                <th>Day of Week</th>
+                <th>Time</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var todo in this.TodosTitles)
+            {
+                <tr>
+                    <td>@todo.CreatedOn.Date.ToShortDateString()</td>
+                    <td>@todo.Title</td>
+                    <td>@todo.CreatedOn.DayOfWeek</td>
+                    <td>@todo.CreatedOn.ToShortTimeString()</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<TodoViewModel> TodosTitles;
+
+    public string UserId => HttpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+    protected override async Task OnInitializedAsync()
+    {
+        TodosTitles = this.Context.Todos
+            .Where(x => x.UserId == this.UserId)
+            .Select(x => new TodoViewModel()
+            {
+                Title = x.Title,
+                CreatedOn = x.CreatedOn,
+            })
+            .OrderByDescending(x => x.CreatedOn)
+            .ToList();
+    }
+}

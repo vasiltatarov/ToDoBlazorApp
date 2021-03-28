@@ -1,0 +1,131 @@
+﻿@page "/"
+@using ToDoBlazorApp.Web.Data
+@using Microsoft.AspNetCore.Http
+@using Microsoft.AspNetCore.Identity
+@using System.Security.Claims
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext Context
+@inject UserManager<IdentityUser> UserManager
+@inject IHttpContextAccessor HttpContextAccessor
+
+@if (this.UserId == null)
+{
+    <div class="alert alert-danger" role="alert">
+        Hi!. If you don't have register, you cannot use database on this app. ToDo app will save your ToDo's when you are logged!.<br/>
+        Please make you register for free...
+    </div>
+}
+
+<div class="todo-container">
+    <h2>Welcome!</h2>
+    <h1>To-Do App!</h1>
+    <hr />
+    <div class="todo-input">
+        <input type="text" @bind="TodoInput" />
+        <button @onclick="AddToDo">Add</button>
+    </div>
+
+    @foreach (var todo in this.ToDos)
+    {
+        <div class="todo-item">
+            <div class="@(todo.IsComplete ? "todo-item__text complete" : "todo-item__text")"
+                 @onclick="@(() => MarkAsComplete(todo.Id))">
+                @todo.Title
+            </div>
+            <div class="todo-item__close" @onclick="@(() => RemoveToDo(todo.Id))">
+                &times;
+            </div>
+        </div>
+    }
+</div>
+
+@code
+{
+    public string TodoInput { get; set; }
+
+    public List<Todo> ToDos { get; set; }
+
+    public string UserId => HttpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (this.UserId != null)
+        {
+            ToDos = this.Context.Todos
+                .Where(x => x.UserId == this.UserId && !x.IsDeleted)
+                .OrderByDescending(x => x.CreatedOn)
+                .ToList();
+        }
+        else
+        {
+            this.ToDos = new List<Todo>();
+        }
+    }
+
+    public async Task AddToDo()
+    {
+        if (string.IsNullOrWhiteSpace(TodoInput))
+        {
+            return;
+        }
+
+        if (this.UserId != null)
+        {
+            var todo = new Todo()
+            {
+                Title = TodoInput,
+                CreatedOn = DateTime.Now,
+                UserId = this.UserId,
+            };
+
+            await this.Context.Todos.AddAsync(todo);
+            await this.Context.SaveChangesAsync();
+
+            TodoInput = String.Empty;
+            await this.OnInitializedAsync();
+        }
+        else
+        {
+            this.ToDos.Add(new Todo()
+            {
+                Id = new Random().Next(1, int.MaxValue),
+                Title = TodoInput,
+            });
+            TodoInput = String.Empty;
+        }
+    }
+
+    public async Task RemoveToDo(int id)
+    {
+        if (this.UserId != null)
+        {
+            var todo = await this.Context.Todos.FirstOrDefaultAsync(x => x.Id == id);
+            todo.IsDeleted = true;
+            await this.Context.SaveChangesAsync();
+
+            await this.OnInitializedAsync();
+        }
+        else
+        {
+            var todo = this.ToDos.FirstOrDefault(x => x.Id == id);
+            this.ToDos.Remove(todo);
+        }
+    }
+
+    public async Task MarkAsComplete(int id)
+    {
+        if (this.UserId != null)
+        {
+            var todo = await this.Context.Todos.FirstOrDefaultAsync(x => x.Id == id);
+            todo.IsComplete = !todo.IsComplete;
+            await this.Context.SaveChangesAsync();
+
+            await this.OnInitializedAsync();
+        }
+        else
+        {
+            var todo = this.ToDos.FirstOrDefault(x => x.Id == id);
+            todo.IsComplete = !todo.IsComplete;
+        }
+    }
+}
