@@ -8,7 +8,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ToDoBlazorApp.Web.Areas.Identity;
 using ToDoBlazorApp.Web.Data;
-using ToDoBlazorApp.Web.Data.Migrations;
 
 namespace ToDoBlazorApp.Web
 {
